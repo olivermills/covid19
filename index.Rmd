@@ -1,0 +1,818 @@
+---
+title: "Coronavirus"
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+#------------------ Packages ------------------
+library(flexdashboard)
+
+#checks if there is data update on the Github version
+coronavirus::update_datasets(silence = TRUE)
+
+#remotes::install_github("RamiKrispin/coronavirus", force = TRUE)
+library(coronavirus)
+library(covid19italy)
+data(coronavirus)
+data(italy_total)
+
+`%>%` <- magrittr::`%>%`
+#------------------ Parameters ------------------
+# Set colors
+# https://www.w3.org/TR/css-color-3/#svg-color
+confirmed_color <- "coral"
+death_color <- "slategray"
+active_color <- "cornflowerblue"
+recovered_color <- "mediumseagreen"
+#------------------ Data ------------------
+df <- coronavirus %>% 
+  dplyr::group_by(Country.Region, type) %>%
+  dplyr::summarise(total = sum(cases)) %>%
+  tidyr::pivot_wider(names_from =  type, values_from = total) %>%
+  dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::arrange(-confirmed) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(country = dplyr::if_else(Country.Region == "United Arab Emirates", "UAE", Country.Region)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "Mainland China", "China", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "North Macedonia", "N.Macedonia", country)) %>%
+  dplyr::mutate(country = trimws(country)) %>%
+  dplyr::mutate(country = factor(country, levels = country))
+
+df_daily <- coronavirus %>% 
+  dplyr::group_by(date, type) %>%
+  dplyr::summarise(total = sum(cases, na.rm = TRUE)) %>%
+  tidyr::pivot_wider(names_from = type, values_from = total) %>%
+  dplyr::arrange(date) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(active =  confirmed - death - recovered) %>%
+  dplyr::mutate(confirmed_cum = cumsum(confirmed),
+                death_cum = cumsum(death),
+                recovered_cum = cumsum(recovered),
+                active_cum = cumsum(active))
+  
+df1 <- coronavirus %>% dplyr::filter(date == max(date))
+
+#------------trajectory plot data prep------------
+df_china <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "China") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(china = cumsum(cases)) %>%
+  dplyr::filter(china > 100)  %>%
+  dplyr::select(-cases, -date)
+df_china$index <- 1:nrow(df_china)
+
+df_uk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "United Kingdom") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(uk = cumsum(cases)) %>%
+  dplyr::filter(uk > 100)  %>%
+  dplyr::select(-cases, -date)
+df_uk$index <- 1:nrow(df_uk)
+
+df_fr <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "France") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(france = cumsum(cases)) %>%
+  dplyr::filter(france > 100)  %>%
+  dplyr::select(-cases, -date)
+df_fr$index <- 1:nrow(df_fr)
+
+df_us <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "US") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(us = cumsum(cases)) %>%
+  dplyr::filter(us > 100)  %>%
+  dplyr::select(-cases, -date)
+df_us$index <- 1:nrow(df_us)
+
+df_iran <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Iran") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(iran = cumsum(cases)) %>%
+  dplyr::filter(iran > 100)  %>%
+  dplyr::select(-cases, -date)
+df_iran$index <- 1:nrow(df_iran)
+
+df_sk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Korea, South") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(sk = cumsum(cases)) %>%
+  dplyr::filter(sk > 100)  %>%
+  dplyr::select(-cases, -date)
+df_sk$index <- 1:nrow(df_sk)
+
+df_nz <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "New Zealand") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(nz = cumsum(cases)) %>%
+  dplyr::filter(nz > 100)  %>%
+  dplyr::select(-cases, -date)
+df_nz$index <- 1:nrow(df_nz)
+
+df_spain <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Spain") %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(date) %>%
+  dplyr::mutate(spain = cumsum(cases)) %>%
+  dplyr::filter(spain > 100)  %>%
+  dplyr::select(-cases, -date)
+df_spain$index <- 1:nrow(df_spain)
+df_italy <- italy_total %>% dplyr::select(date, italy = total_currently_positive) %>%
+  dplyr::filter(italy > 100) %>%
+  dplyr::select(-date)
+df_italy$index <- 1:nrow(df_italy)
+df_trajectory <- df_china %>% 
+  dplyr::left_join(df_italy, by = "index") %>%
+  dplyr::left_join(df_iran, by = "index") %>%
+  dplyr::left_join(df_sk, by = "index") %>%
+  dplyr::left_join(df_us, by = "index") %>%
+  dplyr::left_join(df_fr, by = "index") %>%
+  dplyr::left_join(df_uk, by = "index") %>%
+  dplyr::left_join(df_spain, by = "index") %>%
+  dplyr::left_join(df_nz, by = "index")
+
+```
+
+Summary
+=======================================================================
+Column {data-width=100}
+-----------------------------------------------------------------------
+
+### death {.value-box}
+
+```{r}
+
+valueBox(value = paste(format(sum(df$death, na.rm = TRUE), big.mark = ","), " (",
+                       round(100 * sum(df$death, na.rm = TRUE) / sum(df$confirmed), 1), 
+                       "%)", sep = ""),
+         caption = "Death Cases", 
+         icon = "fas fa-heart-broken", 
+         color = death_color)
+```
+
+### active {.value-box}
+
+```{r}
+valueBox(value = paste(format(sum(df$active, na.rm = TRUE), big.mark = ","), " (",
+                       round(100 * sum(df$active, na.rm = TRUE) / sum(df$confirmed), 1), 
+                       "%)", sep = ""), 
+         caption = "Active Cases", #icon = "fas fa-ambulance", 
+         color = active_color)
+```
+
+### recovered {.value-box}
+
+```{r}
+valueBox(value = paste(format(sum(df$recovered, na.rm = TRUE), big.mark = ","), " (",
+                       round(100 * sum(df$recovered, na.rm = TRUE) / sum(df$confirmed), 1), 
+                       "%)", sep = ""), 
+         caption = "Recovered Cases", #icon = "fas fa-heartbeat", 
+         color = recovered_color)
+```
+
+
+### Top Death Rates by Country (>10 deaths) {data-height=200}
+
+```{r, fig.height=5}
+df_summary <-coronavirus %>% 
+  # dplyr::filter(Country.Region != "Others") %>%
+  dplyr::group_by(Country.Region, type) %>%
+  dplyr::summarise(total_cases = sum(cases)) %>%
+  tidyr::pivot_wider(names_from = type, values_from = total_cases) %>%
+  dplyr::arrange(- confirmed) %>%
+  dplyr::filter(death >= 10) %>%
+  dplyr::select(country = Country.Region, confirmed, death) %>%
+  dplyr::mutate(death_rate = death / confirmed) %>%
+  dplyr::select(country, death_rate) %>%
+  dplyr::arrange(- death_rate)
+
+df_summary %>%
+  DT::datatable(rownames = FALSE,
+            colnames = c("Country", "Death Rate"),
+            options = list(pageLength = nrow(df_summary), dom = 'tip', style = "font-size: 75%; width: 75%")) %>%
+  DT::formatPercentage("death_rate", 2)
+```
+
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+### Cases by Type (Top 20 Countries)
+
+```{r daily_summary}
+
+
+plotly::plot_ly(data = df[1:20,], 
+                x = ~ country, 
+                y = ~ active, 
+                type = "bar", 
+                name = "Active",
+                marker = list(color = active_color)) %>%
+  plotly::add_trace(y = ~ death, 
+                    name = "Death",
+                    marker = list(color = death_color)) %>%
+  plotly::add_trace(y = ~ recovered, 
+                    name = "Recovered",
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(barmode = 'stack',
+                 yaxis = list(title = "Total Cases"),
+#                       type = "log"),
+                 xaxis = list(title = ""),
+                 hovermode = "compare",
+                  margin =  list(
+                   # l = 60,
+                   # r = 40,
+                   b = 10,
+                   t = 10,
+                   pad = 2
+                 ))
+
+```
+
+### Log Cases by Type (Top 20 Countries)
+
+```{r daily_summary log}
+
+plotly::plot_ly(data = df[1:20,], 
+                x = ~ country, 
+                y = ~ active, 
+                type = "bar", 
+                name = "Active",
+                marker = list(color = active_color)) %>%
+  plotly::add_trace(y = ~ death, 
+                    name = "Death",
+                    marker = list(color = death_color)) %>%
+  plotly::add_trace(y = ~ recovered, 
+                    name = "Recovered",
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(barmode = 'stack',
+                 yaxis = list(title = "Total Cases",
+                       type = "log"),
+                 xaxis = list(title = ""),
+                 hovermode = "compare",
+                  margin =  list(
+                   # l = 60,
+                   # r = 40,
+                   b = 10,
+                   t = 10,
+                   pad = 2
+                 ))
+
+```
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+
+### Daily Cumulative Cases
+    
+```{r}
+
+plotly::plot_ly(data = df_daily) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ confirmed_cum,
+                    type = "scatter",
+                    mode = "lines+markers",
+                    name = "Confirmed",
+                    line = list(color = confirmed_color),
+                    marker = list(color = confirmed_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ death_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+   plotly::add_trace(x = ~ date,
+                    y = ~ active_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+     plotly::add_trace(x = ~ date,
+                    y = ~ recovered_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Cumulative Number of Cases"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare")
+  
+
+```
+
+### Log Daily Cumulative Cases
+    
+```{r}
+
+plotly::plot_ly(data = df_daily) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ confirmed_cum,
+                    type = "scatter",
+                    mode = "lines+markers",
+                    name = "Confirmed",
+                    line = list(color = confirmed_color),
+                    marker = list(color = confirmed_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ death_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+   plotly::add_trace(x = ~ date,
+                    y = ~ active_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+     plotly::add_trace(x = ~ date,
+                    y = ~ recovered_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Cumulative Number of Cases (log scaled)", type="log"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare")
+  
+
+```
+
+UK vs NZ
+=======================================================================
+Column
+-----------------------------------------------------------------------
+
+### New Daily Cases (UK)
+
+```{r}
+daily_uk_cases <- coronavirus %>%
+  tidyr::pivot_wider(names_from=type, values_from=cases) %>%
+  dplyr::arrange(Country.Region, date) %>%
+  dplyr::group_by(Country.Region, date) %>%
+  dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::summarise(confirmed = sum(confirmed), death = sum(death)
+                   , recovered = sum(recovered), active=sum(active)) %>%
+  dplyr::mutate(confirmed_cum = cumsum(confirmed), death_cum = cumsum(death),
+                recovered_cum = cumsum(recovered), active_cum = cumsum(active)) %>%
+  dplyr::mutate(case_fatality_rate = death_cum/confirmed_cum) %>%
+  dplyr::filter(Country.Region == "United Kingdom")
+
+daily_nz_cases <- coronavirus %>%
+  tidyr::pivot_wider(names_from=type, values_from=cases) %>%
+  dplyr::arrange(Country.Region, date) %>%
+  dplyr::group_by(Country.Region, date) %>%
+  dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::summarise(confirmed = sum(confirmed), death = sum(death),
+                   recovered = sum(recovered), active = sum(active)) %>%
+  dplyr::mutate(confirmed_cum = cumsum(confirmed), death_cum = cumsum(death),
+                recovered_cum = cumsum(recovered), active_cum = cumsum(active)) %>%
+  dplyr::mutate(case_fatality_rate = death_cum/confirmed_cum) %>%
+  dplyr::filter(Country.Region == "New Zealand")
+
+plotly::plot_ly(data = daily_uk_cases) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ recovered,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+    plotly::add_trace(x = ~ date,
+                    y = ~ death,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ active,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Daily New Cases"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare", 
+                 barmode = 'stack')
+
+```
+
+### Cumulative Cases (UK)
+
+```{r}
+plotly::plot_ly(data = daily_uk_cases) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ confirmed_cum,
+                    type = "scatter",
+                    mode = "lines+markers",
+                    name = "Confirmed",
+                    line = list(color = confirmed_color),
+                    marker = list(color = confirmed_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ death_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+   plotly::add_trace(x = ~ date,
+                    y = ~ active_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+     plotly::add_trace(x = ~ date,
+                    y = ~ recovered_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Cumulative Number of Cases"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare")
+```
+
+Column
+-----------------------------------------------------------------------
+
+### New Daily Cases (NZ)
+
+```{r}
+plotly::plot_ly(data = daily_nz_cases) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ recovered,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+    plotly::add_trace(x = ~ date,
+                    y = ~ death,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ active,
+                    type = "bar",
+                    #mode = "lines+markers",
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Daily New Cases"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare", 
+                 barmode = 'stack')
+```
+
+### Cumulative Cases (NZ)
+
+```{r}
+plotly::plot_ly(data = daily_nz_cases) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ confirmed_cum,
+                    type = "scatter",
+                    mode = "lines+markers",
+                    name = "Confirmed",
+                    line = list(color = confirmed_color),
+                    marker = list(color = confirmed_color)) %>%
+  plotly::add_trace(x = ~ date,
+                    y = ~ death_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Death",
+                    line = list(color = death_color),
+                    marker = list(color = death_color)) %>%
+   plotly::add_trace(x = ~ date,
+                    y = ~ active_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Active",
+                    line = list(color = active_color),
+                    marker = list(color = active_color)) %>%
+     plotly::add_trace(x = ~ date,
+                    y = ~ recovered_cum,
+                    type = "scatter",
+                    mode = 'lines+markers',
+                    name = "Recovered",
+                    line = list(color = recovered_color),
+                    marker = list(color = recovered_color)) %>%
+  plotly::layout(title = "",
+                 yaxis = list(title = "Cumulative Number of Cases"),
+                 xaxis = list(title = "Date"),
+                 legend = list(x = 0.1, y = 0.9),
+                 hovermode = "compare")
+```
+
+Map
+=======================================================================
+
+**Map**
+
+```{r}
+# map tab added by Art Steinmetz
+library(leaflet)
+library(leafpop)
+library(purrr)
+cv_data_for_plot <- coronavirus %>% 
+  dplyr::filter(cases > 0) %>% 
+  dplyr::group_by(Country.Region,Province.State,Lat,Long,type) %>% 
+  dplyr::summarise(cases = sum(cases)) %>% 
+  dplyr::mutate(log_cases = 2 * log(cases)) %>% 
+  dplyr::ungroup()
+cv_data_for_plot.split <- cv_data_for_plot %>% split(cv_data_for_plot$type)
+pal <- colorFactor(c("coral", "slategray","mediumseagreen"), domain = c("confirmed", "death","recovered"))
+map_object <- leaflet() %>% addProviderTiles(providers$CartoDB.Positron)
+names(cv_data_for_plot.split) %>%
+  purrr::walk( function(df) {
+    map_object <<- map_object %>%
+      addCircleMarkers(data=cv_data_for_plot.split[[df]],
+                 lng=~Long, lat=~Lat,
+#                 label=~as.character(cases),
+                 color = ~pal(type),
+                 stroke = FALSE,
+                 fillOpacity = 0.8,
+                 radius = ~log_cases,
+                 popup =  leafpop::popupTable(cv_data_for_plot.split[[df]],
+                                              feature.id = FALSE,
+                                              row.numbers = FALSE,
+                                              zcol=c("type","cases","Country.Region","Province.State")),
+                 group = df,
+#                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
+                 labelOptions = labelOptions(noHide = F,
+                                             direction = 'auto'))
+  })
+map_object %>%
+  addLayersControl(
+    overlayGroups = names(cv_data_for_plot.split),
+    options = layersControlOptions(collapsed = FALSE) 
+  )
+```
+
+Trends
+=======================================================================
+
+
+Column {data-width=400}
+-------------------------------------
+    
+### New Cases - Top 15 Countries (`r  max(coronavirus$date)`)
+    
+```{r}
+max_date <- max(coronavirus$date)
+coronavirus %>% 
+  dplyr::filter(type == "confirmed", date == max_date) %>%
+  dplyr::group_by(Country.Region) %>%
+  dplyr::summarise(total_cases = sum(cases)) %>%
+  dplyr::arrange(-total_cases) %>%
+  dplyr::mutate(country = factor(Country.Region, levels = Country.Region)) %>%
+  dplyr::ungroup() %>%
+  dplyr::top_n(n = 15, wt = total_cases) %>%
+  plotly::plot_ly(x = ~ country,
+                  y = ~ total_cases,
+                  text = ~ total_cases,
+                  textposition = 'auto',
+                  type = "bar") %>%
+  plotly::layout(yaxis = list(title = "Number of Cases"),
+                 xaxis = list(title = ""),
+                 margin =  list(
+                   l = 10,
+                   r = 10,
+                   b = 10,
+                   t = 10,
+                   pad = 2
+                 ))
+
+```
+
+
+### Daily New Cases - China vs. Rest of the World
+    
+```{r}
+daily_confirmed <- coronavirus %>%
+  dplyr::filter(type == "confirmed") %>%
+  dplyr::mutate(country = dplyr::if_else(Country.Region == "China", 
+                                        "China", 
+                                        "Rest of the World")) %>%
+  dplyr::group_by(date, country) %>%
+  dplyr::summarise(total = sum(cases)) %>% 
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = country, values_from = total) 
+
+daily_death <- coronavirus %>%
+  dplyr::filter(type == "death") %>%
+  dplyr::mutate(country = dplyr::if_else(Country.Region == "China", 
+                                         "China", 
+                                         "Rest of the World")) %>%
+  dplyr::group_by(date, country) %>%
+  dplyr::summarise(total = sum(cases)) %>% 
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = country, values_from = total) 
+
+#----------------------------------------
+# Plotting the data
+
+daily_confirmed %>%
+  plotly::plot_ly() %>% 
+  plotly::add_trace(x = ~ date, 
+                    y = ~ China, 
+                    type = "scatter", 
+                    mode = "lines+markers",
+                    name = "China") %>% 
+  plotly::add_trace(x = ~ date, 
+                    y = ~ `Rest of the World`, 
+                    type = "scatter", 
+                    mode = "lines+markers",
+                    name = "Rest of the World") %>% 
+  plotly::add_annotations(x = as.Date("2020-02-13"),
+                          y = 15133,
+                          text = paste("One time adjustment -", 
+                                       "", 
+                                       "China modified the diagnostic criteria"),
+                          xref = "x",
+                          yref = "y",
+                          arrowhead = 5,
+                          arrowhead = 3,
+                          arrowsize = 1,
+                          showarrow = TRUE,
+                          ax = 50,
+                          ay = -40) %>%
+  plotly::add_annotations(x = as.Date("2020-02-26"),
+                          y = 577,
+                          text = paste("New cases outside of China", "", "surpass the ones inside China"),
+                          xref = "x",
+                          yref = "y",
+                          arrowhead = 5,
+                          arrowhead = 3,
+                          arrowsize = 1,
+                          showarrow = TRUE,
+                          ax = -70,
+                          ay = -50) %>%
+  plotly::layout(title = "",
+                 legend = list(x = 0.1, y = 0.9),
+                 yaxis = list(title = "Number of New Cases"),
+                 xaxis = list(title = "Date"),
+                 # paper_bgcolor = "black",
+                 # plot_bgcolor = "black",
+                 # font = list(color = 'white'),
+                 hovermode = "compare",
+                 margin =  list(
+                   # l = 60,
+                   # r = 40,
+                   b = 10,
+                   t = 10,
+                   pad = 2
+                 ))
+
+```
+   
+
+Column {data-width=400}
+-------------------------------------
+### Trajectory Plot - Major Countries 
+
+```{r}
+plotly::plot_ly(data = df_trajectory) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ china,
+                    name = "China",  line = list(width = 2)) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ italy,
+                    line = list(color = "red", width = 2),
+                    name = "Italy") %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ us,
+                    name = "United States",  line = list(width = 2)) %>%
+    plotly::add_lines(x = ~ index,
+                    y = ~ uk,
+                    name = "United Kingdom",  line = list(width = 2)) %>%
+      plotly::add_lines(x = ~ index,
+                    y = ~ france,
+                    name = "France",  line = list(width = 2)) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ iran,
+                    name = "Iran",  line = list(color = "orange", width = 2)) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ sk,
+                    name = "South Korea",  line = list(width = 2)) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ nz,
+                    name = "New Zealand", line = list(width = 2)) %>%
+  plotly::add_lines(x = ~ index,
+                    y = ~ spain,
+                    name = "Spain") %>%
+  plotly::layout(yaxis = list(title = "Cumulative Positive Cases",type = "log"),
+                 xaxis = list(title = "Days since the total positive cases surpass 100"),
+                 legend = list(x = 0.7, y = 0.3),
+                 hovermode = "compare")
+```
+   
+   
+### Recovery and Death Rates for Countries with at Least 5000 Cases
+
+```{r}
+coronavirus::coronavirus %>% 
+  # dplyr::filter(Country.Region != "Others") %>%
+  dplyr::group_by(Country.Region, type) %>%
+  dplyr::summarise(total_cases = sum(cases)) %>%
+  tidyr::pivot_wider(names_from = type, values_from = total_cases) %>%
+  dplyr::arrange(- confirmed) %>%
+  dplyr::filter(confirmed >= 5000) %>%
+  dplyr::mutate(recover_rate = recovered / confirmed,
+                death_rate = death / confirmed) %>% 
+  dplyr::mutate(recover_rate = dplyr::if_else(is.na(recover_rate), 0, recover_rate),
+                death_rate = dplyr::if_else(is.na(death_rate), 0, death_rate)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(confirmed_normal = as.numeric(confirmed) / max(as.numeric(confirmed))) %>%
+  plotly::plot_ly(y = ~ round(100 * recover_rate, 1),
+                  x = ~ round(100 * death_rate, 1),
+                  size = ~  log(confirmed),
+                  sizes = c(5, 70),
+                  type = 'scatter', mode = 'markers',
+                  color = ~ Country.Region,
+                  marker = list(sizemode = 'diameter' , opacity = 0.5),
+                  hoverinfo = 'text',
+                  text = ~paste("</br>", Country.Region, 
+                                "</br> Confirmed Cases: ", confirmed,
+                                "</br> Recovery Rate: ", paste(round(100 * recover_rate, 1), "%", sep = ""),
+                                "</br> Death Rate: ",  paste(round(100 * death_rate, 1), "%", sep = ""))
+                 ) %>%
+  plotly::layout(yaxis = list(title = "Recovery Rate", ticksuffix = "%"),
+                xaxis = list(title = "Death Rate", ticksuffix = "%", 
+                             dtick = 1, 
+                             tick0 = 0),
+                hovermode = "compare")
+  
+```   
+
+
+
+About
+=======================================================================
+
+**The Coronavirus Dashboard**
+
+This Coronavirus dashboard provides an overview of the 2019 Novel Coronavirus COVID-19 (2019-nCoV) epidemic. This dashboard is built with R using the Rmakrdown framework and can easily reproduce by others. The code behind the dashboard available [here](https://github.com/olivermills/covid19). The layout and most of the code was taken from Rami Krispin's [dashboard](https://github.com/RamiKrispin/coronavirus).
+
+**Data**
+
+The input data for this dashboard is the [coronavirus](https://github.com/RamiKrispin/coronavirus) R package (dev version). The data and dashboard is refreshed on a daily bases. The raw data pulled from the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Coronavirus [repository](https://github.com/RamiKrispin/coronavirus-csv)
+
+**Packages**
+
+* Dashboard interface - the [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/) package. 
+* Visualization - the [plotly](https://plot.ly/r/) package for the plots and [leaflet](https://rstudio.github.io/leaflet/) for the map
+* Data manipulation - [dplyr](https://dplyr.tidyverse.org/), and [tidyr](https://tidyr.tidyverse.org/)
+
+**Deployment and reproducibly**
+
+The dashboard was deployed to Github docs. If you wish to deploy and/or modify the dashboard on your Github account, you can apply the following steps:
+
+* Fork the dashboard [repository](https://github.com/RamiKrispin/coronavirus_dashboard), or
+* Clone it and push it to your Github package
+* Here some general guidance about deployment of flexdashboard on Github page - [link](https://github.com/pbatey/flexdashboard-example)
+
+For any question or feedback, you can either open an [issue](https://github.com/RamiKrispin/coronavirus_dashboard/issues) or contact Rami Krispin on [Twitter](https://twitter.com/Rami_Krispin).
+
+**Contribution** 
+
+The **Map** tab was contributed by [Art Steinmetz](@adababbage) on this [pull request](https://github.com/RamiKrispin/coronavirus_dashboard/pull/1). Thanks Art!
