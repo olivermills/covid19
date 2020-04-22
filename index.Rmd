@@ -11,7 +11,7 @@ output:
 library(flexdashboard)
 
 #checks if there is data update on the Github version
-#coronavirus::update_datasets(silence = TRUE)
+coronavirus::update_datasets(silence = TRUE)
 
 #remotes::install_github("RamiKrispin/coronavirus", force = TRUE)
 library(coronavirus)
@@ -706,9 +706,10 @@ daily_confirmed %>%
 ```
    
 
-Column {data-width=400, .tabset}
+Column {data-width=400}
 -------------------------------------
-### Trajectory Plot - Major Countries 
+
+### Log Trajectory Plot - Major Countries 
 
 ```{r}
 plotly::plot_ly(data = df_trajectory) %>%
@@ -745,7 +746,6 @@ plotly::plot_ly(data = df_trajectory) %>%
                  legend = list(x = 0.7, y = 0.3),
                  hovermode = "compare")
 ```
-   
    
 ### Recovery and Death Rates for Countries with at Least 5000 Cases
 
@@ -815,4 +815,4 @@ For any question or feedback, you can either open an [issue](https://github.com/
 
 **Contribution** 
 
-The **Map** tab was contributed by [Art Steinmetz](@adababbage) on this [pull request](https://github.com/RamiKrispin/coronavirus_dashboard/pull/1). Thanks Art!
+The **Map** tab was contributed by [Art Steinmetz](https://github.com/apsteinmetz) on this [pull request](https://github.com/RamiKrispin/coronavirus_dashboard/pull/1). Thanks Art!
