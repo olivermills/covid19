@@ -11,7 +11,7 @@ output:
 library(flexdashboard)
 
 #checks if there is data update on the Github version
-coronavirus::update_datasets(silence = TRUE)
+#coronavirus::update_datasets(silence = TRUE)
 
 #remotes::install_github("RamiKrispin/coronavirus", force = TRUE)
 library(coronavirus)
