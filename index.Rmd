@@ -9,16 +9,13 @@ output:
 ```{r setup, include=FALSE}
 #------------------ Packages ------------------
 library(flexdashboard)
-
 #checks if there is data update on the Github version
 coronavirus::update_dataset(silence = TRUE)
-
 #remotes::install_github("RamiKrispin/coronavirus", force = TRUE)
 library(coronavirus)
 library(covid19italy)
 data(coronavirus)
 data(italy_total)
-
 `%>%` <- magrittr::`%>%`
 #------------------ Parameters ------------------
 # Set colors
@@ -29,18 +26,17 @@ active_color <- "cornflowerblue"
 recovered_color <- "mediumseagreen"
 #------------------ Data ------------------
 df <- coronavirus %>% 
-  dplyr::group_by(Country.Region, type) %>%
+  dplyr::group_by(country, type) %>%
   dplyr::summarise(total = sum(cases)) %>%
   tidyr::pivot_wider(names_from =  type, values_from = total) %>%
   dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
   dplyr::arrange(-confirmed) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(country = dplyr::if_else(Country.Region == "United Arab Emirates", "UAE", Country.Region)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "United Arab Emirates", "UAE", country)) %>%
   dplyr::mutate(country = dplyr::if_else(country == "Mainland China", "China", country)) %>%
   dplyr::mutate(country = dplyr::if_else(country == "North Macedonia", "N.Macedonia", country)) %>%
   dplyr::mutate(country = trimws(country)) %>%
   dplyr::mutate(country = factor(country, levels = country))
-
 df_daily <- coronavirus %>% 
   dplyr::group_by(date, type) %>%
   dplyr::summarise(total = sum(cases, na.rm = TRUE)) %>%
@@ -54,9 +50,8 @@ df_daily <- coronavirus %>%
                 active_cum = cumsum(active))
   
 df1 <- coronavirus %>% dplyr::filter(date == max(date))
-
 #------------trajectory plot data prep------------
-df_china <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "China") %>%
+df_china <- coronavirus %>% dplyr::filter(type == "confirmed", country == "China") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -65,8 +60,7 @@ df_china <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region ==
   dplyr::filter(china > 100)  %>%
   dplyr::select(-cases, -date)
 df_china$index <- 1:nrow(df_china)
-
-df_uk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "United Kingdom") %>%
+df_uk <- coronavirus %>% dplyr::filter(type == "confirmed", country == "United Kingdom") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -75,8 +69,7 @@ df_uk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "U
   dplyr::filter(uk > 100)  %>%
   dplyr::select(-cases, -date)
 df_uk$index <- 1:nrow(df_uk)
-
-df_fr <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "France") %>%
+df_fr <- coronavirus %>% dplyr::filter(type == "confirmed", country == "France") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -85,8 +78,7 @@ df_fr <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "F
   dplyr::filter(france > 100)  %>%
   dplyr::select(-cases, -date)
 df_fr$index <- 1:nrow(df_fr)
-
-df_us <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "US") %>%
+df_us <- coronavirus %>% dplyr::filter(type == "confirmed", country == "US") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -95,8 +87,7 @@ df_us <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "U
   dplyr::filter(us > 100)  %>%
   dplyr::select(-cases, -date)
 df_us$index <- 1:nrow(df_us)
-
-df_iran <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Iran") %>%
+df_iran <- coronavirus %>% dplyr::filter(type == "confirmed", country == "Iran") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -105,8 +96,7 @@ df_iran <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == 
   dplyr::filter(iran > 100)  %>%
   dplyr::select(-cases, -date)
 df_iran$index <- 1:nrow(df_iran)
-
-df_sk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Korea, South") %>%
+df_sk <- coronavirus %>% dplyr::filter(type == "confirmed", country == "Korea, South") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -115,8 +105,7 @@ df_sk <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "K
   dplyr::filter(sk > 100)  %>%
   dplyr::select(-cases, -date)
 df_sk$index <- 1:nrow(df_sk)
-
-df_nz <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "New Zealand") %>%
+df_nz <- coronavirus %>% dplyr::filter(type == "confirmed", country == "New Zealand") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -125,8 +114,7 @@ df_nz <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "N
   dplyr::filter(nz > 100)  %>%
   dplyr::select(-cases, -date)
 df_nz$index <- 1:nrow(df_nz)
-
-df_spain <- coronavirus %>% dplyr::filter(type == "confirmed", Country.Region == "Spain") %>%
+df_spain <- coronavirus %>% dplyr::filter(type == "confirmed", country == "Spain") %>%
   dplyr::group_by(date) %>%
   dplyr::summarise(cases = sum(cases)) %>%
   dplyr::ungroup() %>%
@@ -148,7 +136,6 @@ df_trajectory <- df_china %>%
   dplyr::left_join(df_uk, by = "index") %>%
   dplyr::left_join(df_spain, by = "index") %>%
   dplyr::left_join(df_nz, by = "index")
-
 ```
 
 Summary
@@ -159,7 +146,6 @@ Column {data-width=100}
 ### death {.value-box}
 
 ```{r}
-
 valueBox(value = paste(format(sum(df$death, na.rm = TRUE), big.mark = ","), " (",
                        round(100 * sum(df$death, na.rm = TRUE) / sum(df$confirmed), 1), 
                        "%)", sep = ""),
@@ -194,16 +180,16 @@ valueBox(value = paste(format(sum(df$recovered, na.rm = TRUE), big.mark = ","), 
 ```{r, fig.height=5}
 df_summary <-coronavirus %>% 
   # dplyr::filter(Country.Region != "Others") %>%
-  dplyr::group_by(Country.Region, type) %>%
+  dplyr::group_by(country, type) %>%
   dplyr::summarise(total_cases = sum(cases)) %>%
   tidyr::pivot_wider(names_from = type, values_from = total_cases) %>%
   dplyr::arrange(- confirmed) %>%
   dplyr::filter(death >= 10) %>%
-  dplyr::select(country = Country.Region, confirmed, death) %>%
+  dplyr::select(country = country
+                , confirmed, death) %>%
   dplyr::mutate(death_rate = death / confirmed) %>%
   dplyr::select(country, death_rate) %>%
   dplyr::arrange(- death_rate)
-
 df_summary %>%
   DT::datatable(rownames = FALSE,
             colnames = c("Country", "Death Rate"),
@@ -218,8 +204,6 @@ Column {data-width=500, .tabset}
 ### Cases by Type (Top 20 Countries)
 
 ```{r daily_summary}
-
-
 plotly::plot_ly(data = df[1:20,], 
                 x = ~ country, 
                 y = ~ active, 
@@ -244,13 +228,11 @@ plotly::plot_ly(data = df[1:20,],
                    t = 10,
                    pad = 2
                  ))
-
 ```
 
 ### Log Cases by Type (Top 20 Countries)
 
 ```{r daily_summary log}
-
 plotly::plot_ly(data = df[1:20,], 
                 x = ~ country, 
                 y = ~ active, 
@@ -275,7 +257,6 @@ plotly::plot_ly(data = df[1:20,],
                    t = 10,
                    pad = 2
                  ))
-
 ```
 
 Column {data-width=500, .tabset}
@@ -285,7 +266,6 @@ Column {data-width=500, .tabset}
 ### Daily Cumulative Cases
     
 ```{r}
-
 plotly::plot_ly(data = df_daily) %>%
   plotly::add_trace(x = ~ date,
                     y = ~ confirmed_cum,
@@ -321,13 +301,11 @@ plotly::plot_ly(data = df_daily) %>%
                  legend = list(x = 0.1, y = 0.9),
                  hovermode = "compare")
   
-
 ```
 
 ### Log Daily Cumulative Cases
     
 ```{r}
-
 plotly::plot_ly(data = df_daily) %>%
   plotly::add_trace(x = ~ date,
                     y = ~ confirmed_cum,
@@ -363,7 +341,6 @@ plotly::plot_ly(data = df_daily) %>%
                  legend = list(x = 0.1, y = 0.9),
                  hovermode = "compare")
   
-
 ```
 
 UK vs NZ
@@ -375,29 +352,28 @@ Column
 
 ```{r}
 daily_uk_cases <- coronavirus %>%
+  dplyr::filter(country == "United Kingdom") %>%
   tidyr::pivot_wider(names_from=type, values_from=cases) %>%
-  dplyr::arrange(Country.Region, date) %>%
-  dplyr::group_by(Country.Region, date) %>%
+  dplyr::arrange(country, date) %>%
+  dplyr::group_by(country, province, date) %>%
   dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
   dplyr::summarise(confirmed = sum(confirmed), death = sum(death)
                    , recovered = sum(recovered), active=sum(active)) %>%
   dplyr::mutate(confirmed_cum = cumsum(confirmed), death_cum = cumsum(death),
                 recovered_cum = cumsum(recovered), active_cum = cumsum(active)) %>%
-  dplyr::mutate(case_fatality_rate = death_cum/confirmed_cum) %>%
-  dplyr::filter(Country.Region == "United Kingdom")
-
+  dplyr::mutate(case_fatality_rate = death_cum/confirmed_cum)
+  
 daily_nz_cases <- coronavirus %>%
   tidyr::pivot_wider(names_from=type, values_from=cases) %>%
-  dplyr::arrange(Country.Region, date) %>%
-  dplyr::group_by(Country.Region, date) %>%
+  dplyr::arrange(country, date) %>%
+  dplyr::group_by(country, date) %>%
   dplyr::mutate(active = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
   dplyr::summarise(confirmed = sum(confirmed), death = sum(death),
                    recovered = sum(recovered), active = sum(active)) %>%
   dplyr::mutate(confirmed_cum = cumsum(confirmed), death_cum = cumsum(death),
                 recovered_cum = cumsum(recovered), active_cum = cumsum(active)) %>%
   dplyr::mutate(case_fatality_rate = death_cum/confirmed_cum) %>%
-  dplyr::filter(Country.Region == "New Zealand")
-
+  dplyr::filter(country == "New Zealand")
 plotly::plot_ly(data = daily_uk_cases) %>%
   plotly::add_trace(x = ~ date,
                     y = ~ recovered,
@@ -426,7 +402,6 @@ plotly::plot_ly(data = daily_uk_cases) %>%
                  legend = list(x = 0.1, y = 0.9),
                  hovermode = "compare", 
                  barmode = 'stack')
-
 ```
 
 ### Cumulative Cases (UK)
@@ -555,7 +530,7 @@ library(leafpop)
 library(purrr)
 cv_data_for_plot <- coronavirus %>% 
   dplyr::filter(cases > 0) %>% 
-  dplyr::group_by(Country.Region,Province.State,Lat,Long,type) %>% 
+  dplyr::group_by(country,province,lat,long,type) %>% 
   dplyr::summarise(cases = sum(cases)) %>% 
   dplyr::mutate(log_cases = 2 * log(cases)) %>% 
   dplyr::ungroup()
@@ -566,7 +541,7 @@ names(cv_data_for_plot.split) %>%
   purrr::walk( function(df) {
     map_object <<- map_object %>%
       addCircleMarkers(data=cv_data_for_plot.split[[df]],
-                 lng=~Long, lat=~Lat,
+                 lng=~long, lat=~lat,
 #                 label=~as.character(cases),
                  color = ~pal(type),
                  stroke = FALSE,
@@ -575,7 +550,7 @@ names(cv_data_for_plot.split) %>%
                  popup =  leafpop::popupTable(cv_data_for_plot.split[[df]],
                                               feature.id = FALSE,
                                               row.numbers = FALSE,
-                                              zcol=c("type","cases","Country.Region","Province.State")),
+                                              zcol=c("type","cases","country","province")),
                  group = df,
 #                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
                  labelOptions = labelOptions(noHide = F,
@@ -601,10 +576,10 @@ Column {data-width=400}
 max_date <- max(coronavirus$date)
 coronavirus %>% 
   dplyr::filter(type == "confirmed", date == max_date) %>%
-  dplyr::group_by(Country.Region) %>%
+  dplyr::group_by(country) %>%
   dplyr::summarise(total_cases = sum(cases)) %>%
   dplyr::arrange(-total_cases) %>%
-  dplyr::mutate(country = factor(Country.Region, levels = Country.Region)) %>%
+  dplyr::mutate(country = factor(country, levels = country)) %>%
   dplyr::ungroup() %>%
   dplyr::top_n(n = 15, wt = total_cases) %>%
   plotly::plot_ly(x = ~ country,
@@ -621,72 +596,45 @@ coronavirus %>%
                    t = 10,
                    pad = 2
                  ))
-
 ```
 
 
-### Daily New Cases - China vs. Rest of the World
+### Daily New Cases - USA vs. Rest of the World
     
 ```{r}
 daily_confirmed <- coronavirus %>%
   dplyr::filter(type == "confirmed") %>%
-  dplyr::mutate(country = dplyr::if_else(Country.Region == "China", 
-                                        "China", 
+  dplyr::mutate(country = dplyr::if_else(country == "US", 
+                                        "US", 
                                         "Rest of the World")) %>%
   dplyr::group_by(date, country) %>%
   dplyr::summarise(total = sum(cases)) %>% 
   dplyr::ungroup() %>%
   tidyr::pivot_wider(names_from = country, values_from = total) 
-
 daily_death <- coronavirus %>%
   dplyr::filter(type == "death") %>%
-  dplyr::mutate(country = dplyr::if_else(Country.Region == "China", 
-                                         "China", 
+  dplyr::mutate(country = dplyr::if_else(country == "US", 
+                                         "US", 
                                          "Rest of the World")) %>%
   dplyr::group_by(date, country) %>%
   dplyr::summarise(total = sum(cases)) %>% 
   dplyr::ungroup() %>%
   tidyr::pivot_wider(names_from = country, values_from = total) 
-
 #----------------------------------------
 # Plotting the data
-
 daily_confirmed %>%
   plotly::plot_ly() %>% 
   plotly::add_trace(x = ~ date, 
-                    y = ~ China, 
+                    y = ~ US, 
                     type = "scatter", 
                     mode = "lines+markers",
-                    name = "China") %>% 
+                    name = "USA") %>% 
   plotly::add_trace(x = ~ date, 
                     y = ~ `Rest of the World`, 
                     type = "scatter", 
                     mode = "lines+markers",
                     name = "Rest of the World") %>% 
-  plotly::add_annotations(x = as.Date("2020-02-13"),
-                          y = 15133,
-                          text = paste("One time adjustment -", 
-                                       "", 
-                                       "China modified the diagnostic criteria"),
-                          xref = "x",
-                          yref = "y",
-                          arrowhead = 5,
-                          arrowhead = 3,
-                          arrowsize = 1,
-                          showarrow = TRUE,
-                          ax = 50,
-                          ay = -40) %>%
-  plotly::add_annotations(x = as.Date("2020-02-26"),
-                          y = 577,
-                          text = paste("New cases outside of China", "", "surpass the ones inside China"),
-                          xref = "x",
-                          yref = "y",
-                          arrowhead = 5,
-                          arrowhead = 3,
-                          arrowsize = 1,
-                          showarrow = TRUE,
-                          ax = -70,
-                          ay = -50) %>%
+ 
   plotly::layout(title = "",
                  legend = list(x = 0.1, y = 0.9),
                  yaxis = list(title = "Number of New Cases"),
@@ -702,7 +650,6 @@ daily_confirmed %>%
                    t = 10,
                    pad = 2
                  ))
-
 ```
    
 
@@ -752,7 +699,7 @@ plotly::plot_ly(data = df_trajectory) %>%
 ```{r}
 coronavirus::coronavirus %>% 
   # dplyr::filter(Country.Region != "Others") %>%
-  dplyr::group_by(Country.Region, type) %>%
+  dplyr::group_by(country, type) %>%
   dplyr::summarise(total_cases = sum(cases)) %>%
   tidyr::pivot_wider(names_from = type, values_from = total_cases) %>%
   dplyr::arrange(- confirmed) %>%
@@ -768,10 +715,10 @@ coronavirus::coronavirus %>%
                   size = ~  log(confirmed),
                   sizes = c(5, 70),
                   type = 'scatter', mode = 'markers',
-                  color = ~ Country.Region,
+                  color = ~ country,
                   marker = list(sizemode = 'diameter' , opacity = 0.5),
                   hoverinfo = 'text',
-                  text = ~paste("</br>", Country.Region, 
+                  text = ~paste("</br>", country, 
                                 "</br> Confirmed Cases: ", confirmed,
                                 "</br> Recovery Rate: ", paste(round(100 * recover_rate, 1), "%", sep = ""),
                                 "</br> Death Rate: ",  paste(round(100 * death_rate, 1), "%", sep = ""))
